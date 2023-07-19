@@ -1,0 +1,187 @@
+---
+title: "Cyclistic Bike Share"
+author: "Mohammed abd elghany helal"
+date: "2023-07-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Scenario
+
+You are a junior data analyst working for Cyclistic, a bike share company based in Chicago. You are tasked with using the data provided to understand the differences between their two types of riders: casual and member. Converting more of these casual riders to members is key to future growth of the company, and as such it falls to you to use your understanding to come up with recommendations for the marketing team, who will devise a new marketing strategy based on your findings. But in order to achieve this, you must back up your findings with rock-solid analysis and compelling visualizations.
+
+The task begins with exploring the data and choosing the right tools for the job...
+
+
+## Preparing the Data
+
+There is a pile of not-so-organized data on an AWS server that we have to look at. After some examination, there seems to be a complete and consistently formatted year worth of data for 2021, so we go with that for our analysis, as it will create the least amount of problems in processing while giving us an entire year to work with. We also choose RStudio as our tool as it can handle the requisite large amount of data and allow us to do visualizaitons as well. But we will still export to Tableau at the end for more advanced visuals.
+
+Seeing as the data comes straight from the company operating the bike share, we can trust that it is valid. Now that we have a good foundation of data and tools, we can proceed.
+
+
+## Processing the Data
+
+#### Now in the R Studio environment
+We begin by loading the necessary packages.
+```{r}
+library(tidyverse)
+library(lubridate)
+library(janitor)
+library(ggplot2)
+```
+
+Then we load our files in and rename them to something simpler.
+
+```{r}
+trips_202206 <- read.csv("202206-divvy-tripdata.csv")
+trips_202207 <- read.csv("202207-divvy-tripdata.csv")
+trips_202208 <- read.csv("202208-divvy-tripdata.csv")
+trips_202209 <- read.csv("202209-divvy-publictripdata.csv")
+trips_202210 <- read.csv("202210-divvy-tripdata.csv")
+trips_202211 <- read.csv("202211-divvy-tripdata.csv")
+trips_202212 <- read.csv("202212-divvy-tripdata.csv")
+trips_202301 <- read.csv("202301-divvy-tripdata.csv")
+trips_202302 <- read.csv("202302-divvy-tripdata.csv")
+trips_202303 <- read.csv("202303-divvy-tripdata.csv")
+trips_202304 <- read.csv("202304-divvy-tripdata.csv")
+trips_202305 <- read.csv("202305-divvy-tripdata.csv")
+```
+####We use colnames to check if the columns match across all tables.
+```{r}
+colnames(trips_202206)
+colnames(trips_202207)
+colnames(trips_202208)
+colnames(trips_202209)
+colnames(trips_202210)
+colnames(trips_202211)
+colnames(trips_202212)
+colnames(trips_202301)
+colnames(trips_202302)
+colnames(trips_202303)
+colnames(trips_202304)
+colnames(trips_202305)
+```
+####Visually inspect the tables.
+
+```{r}
+View(trips_202206)
+View(trips_202207)
+View(trips_202208)
+View(trips_202209)
+View(trips_202210)
+View(trips_202211)
+View(trips_202212)
+View(trips_202301)
+View(trips_202302)
+View(trips_202303)
+View(trips_202304)
+View(trips_202305)
+```
+####The str function gives us more info on the data in the table, such as the data types, which will need to be congruent in order to merge the tables together
+
+```{r}
+str(trips_202206)
+str(trips_202207)
+str(trips_202208)
+str(trips_202209)
+str(trips_202210)
+str(trips_202211)
+str(trips_202212)
+str(trips_202301)
+str(trips_202302)
+str(trips_202303)
+str(trips_202304)
+str(trips_202305)
+```
+####This function, as a final check, gives you the number of columns that don't match. Everything seems to be in order here... so we can move on to the next stage.
+```{r}
+compare_df_cols(trips_202206,trips_202207,trips_202208,trips_202209,trips_202210,trips_202211,trips_202212,trips_202301,trips_202302,trips_202303,trips_202304,trips_202304)
+```
+
+### Creating Our Data Table
+
+####Finally we can merge all of the tables into one large data frame.
+
+```{r}
+trips_2022_2023 <- bind_rows(trips_202206,trips_202207,trips_202208,trips_202209,trips_202210,trips_202211,trips_202212,trips_202301,trips_202302,trips_202304,trips_202303,trips_202305)
+```
+####Check out the newly created table! View lets you actually see the table while the following functions are just several different ways of pulling the summary statistics for the data frame.
+
+```{r}
+View(trips_2022_2023)
+
+dim(trips_2022_2023)
+
+head(trips_2022_2023)
+
+str(trips_2022_2023)
+
+summary(trips_2022_2023 )
+```
+####Now we need to reformat the data types of the started_at and ended_at columns so we can perform calculations with them.
+
+```{r}
+trips_2022_2023$started_at = as.POSIXct(trips_2022_2023$started_at, format = "%Y-%m-%d %H:%M:%S")
+trips_2022_2023$ended_at = as.POSIXct(trips_2022_2023$ended_at, format = "%Y-%m-%d %H:%M:%S")
+```
+####
+In order to study the trends of usage times, we'll need to break down the date column into individual attributes so they can be used separately. So now we'll have columns for date, year, month, day, and day of week.
+```{r}
+trips_2022_2023$date <- as.Date(trips_2022_2023$started_at)
+trips_2022_2023$year <- format(as.Date(trips_2022_2023$date), "%Y")
+trips_2022_2023$month <- format(as.Date(trips_2022_2023$date), "%m")
+trips_2022_2023$day <- format(as.Date(trips_2022_2023$date), "%d")
+trips_2022_2023$day_of_week <- format(as.Date(trips_2022_2023$date), "%A")
+```
+#### Now let's create a column for ride length. And with this one as well, it will need to be converted to numeric in order to use it for calculations. Finally, remove any ride times less than 0.
+
+```{r}
+trips_2022_2023$ride_length <- difftime(trips_2022_2023$ended_at,trips_2022_2023$started_at)
+```
+
+```{r}
+trips_2022_2023$ride_length <- as.numeric(as.character(trips_2022_2023$ride_length))
+```
+
+```{r}
+trips_2022_2023<- trips_2022_2023[!(trips_2022_2023$ride_length < 0),]
+```
+####While we're cleaning up, go ahead and remove any blank rows from the table. Just like with ride lengths less than 0, there's not enough to really affect our analysis, but it's still good practice to make sure the data is as clean as possible.
+
+```{r}
+trips_2022_2023<- trips_2022_2023 %>%
+  na.omit()
+```
+
+
+
+####
+Go ahead and check the table one final time! It looks clean and ready to go.
+
+```{r}
+View(trips_2022_2023)
+
+str(trips_2022_2023)
+```
+
+####Now we can write the file for export to Tableau for visualization, or continue on working with RStudio. I chose to do some preliminary analysis and visualizing in RStudio first. Notice I wrote two different versions, the first one with no rows or values removed.
+```{r}
+write.csv(trips_2022_2023, "trips_2022_2023.csv")
+```
+
+
+
+## Analysis
+
+Let's begin by computing some simple statistics on the table.
+
+```{r}
+mean(trips_2022_2023$ride_length)
+median(trips_2022_2023$ride_length)
+max(trips_2022_2023$ride_length)
+min(trips_2022_2023$ride_length)
+```
