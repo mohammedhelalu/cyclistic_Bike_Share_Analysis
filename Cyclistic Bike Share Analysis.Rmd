@@ -8,7 +8,8 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
+The data was downloaded directly from the Divvy Bikes website:
+https://www.divvybikes.com/system-data
 ## Scenario
 
 You are a junior data analyst working for Cyclistic, a bike share company based in Chicago. You are tasked with using the data provided to understand the differences between their two types of riders: casual and member. Converting more of these casual riders to members is key to future growth of the company, and as such it falls to you to use your understanding to come up with recommendations for the marketing team, who will devise a new marketing strategy based on your findings. But in order to achieve this, you must back up your findings with rock-solid analysis and compelling visualizations.
